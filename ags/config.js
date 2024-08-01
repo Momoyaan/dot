@@ -1,48 +1,53 @@
-import Gtk from "gi://Gtk?version=3.0";
-import Gdk from "gi://Gdk";
+import { App, Audio, Notifications, Utils } from "./imports.js";
+import Bar from "./windows/bar/main.js";
+import Music from "./windows/music/main.js";
+import NotificationPopup from "./windows/notifications/popups.js";
+import Osd from "./windows/osd/main.js";
+import SystemMenu from "./windows/system-menu/main.js";
 
-import { Bar } from "./layouts/bar.js";
-import { Notifications } from "./layouts/notifications.js";
-import { OSD } from "./layouts/osd.js";
-import { Quicksettings } from "./layouts/quicksettings.js";
+const scss = App.configDir + "/style.scss";
+const css = App.configDir + "/style.css";
 
-/**
- * @param {Array<(monitor: number) => Gtk.Window>} widgets
- */
-export function forMonitors(widgets) {
-	const display = Gdk.Display.get_default();
+Utils.exec(`sass ${scss} ${css}`);
 
-	display?.connect("monitor-added", (disp, gdkmonitor) => {
-		let monitor = 0;
-		for (let i = 0; i < display.get_n_monitors(); i++) {
-			if (gdkmonitor === display.get_monitor(i)) {
-				monitor = i;
-				break;
-			}
-		}
-
-		widgets.forEach((win) => App.addWindow(win(monitor)));
-	});
-
-	display?.connect("monitor-removed", (disp, monitor) => {
-		App.windows.forEach((win) => {
-			// @ts-ignore
-			if (win.gdkmonitor === monitor) App.removeWindow(win);
-		});
-	});
-
-	const n = display?.get_n_monitors() || 1;
-	return Array.from({ length: n }, (_, i) => i).flatMap((mon) =>
-		widgets.map((x) => x(mon)),
-	);
-}
+App.connect("config-parsed", () => print("config parsed"));
 
 App.config({
-	closeWindowDelay: {
-		quicksettings: 300,
-		notifications: 200,
-		osd: 300,
-	},
-	style: `${App.configDir}/style.css`,
-	windows: [...forMonitors([Bar]), Quicksettings(), Notifications(), OSD()],
+  style: css,
+  closeWindowDelay: {
+    "system-menu": 200,
+  },
 });
+
+Notifications.popupTimeout = 5000;
+Notifications.forceTimeout = false;
+Notifications.cacheActions = true;
+Audio.maxStreamVolume = 1;
+
+function reloadCss() {
+  console.log("scss change detected");
+  Utils.exec(`sass ${scss} ${css}`);
+  App.resetCss();
+  App.applyCss(css);
+}
+
+Utils.monitorFile(`${App.configDir}/style`, reloadCss);
+
+/**
+ * @param {import("types/widgets/window.js").Window[]} windows
+ */
+function addWindows(windows) {
+  windows.forEach((win) => App.addWindow(win));
+}
+
+addWindows(
+  [
+    Bar(),
+    Music(),
+    Osd(),
+    SystemMenu(),
+    NotificationPopup(),
+  ],
+);
+
+export {};

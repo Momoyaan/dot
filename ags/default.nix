@@ -1,53 +1,52 @@
 {
-  pkgs,
   inputs,
+  pkgs,
+  lib,
+  config,
   ...
 }: let
-  covercolors = pkgs.stdenv.mkDerivation {
-    name = "covercolors";
-    dontUnpack = true;
-    propagatedBuildInputs = [
-      (pkgs.python3.withPackages (pyPkgs:
-        with pyPkgs; [
-          material-color-utilities
-          pillow
-        ]))
-    ];
-    installPhase = "install -Dm755 ${./covercolors.py} $out/bin/covercolors";
-  };
-  # systemdTarget = "graphical-session.target";
-  ags = pkgs.ags.overrideAttrs (_: prev: {
-    buildInputs =
-      prev.buildInputs
-      ++ [
-        pkgs.libdbusmenu-gtk3
-        inputs.astal-river.packages.x86_64-linux.default
-      ];
-  });
-in {
-  home.packages = with pkgs; [
-    ags
-    # TODO: Find a way to add this for ags only
-    covercolors
-    brightnessctl
-    blueberry
+  requiredDeps = with pkgs; [
+    config.wayland.windowManager.hyprland.package
+    bash
+    coreutils
+    dart-sass
+    gawk
+    imagemagick
+    procps
+    ripgrep
+    util-linux
   ];
-  # systemd.user.services.ags = {
-  #   Unit = {
-  #     Description = " A customizable and extensible shell ";
-  #     PartOf = systemdTarget;
-  #     Requires = systemdTarget;
-  #     After = systemdTarget;
-  #   };
-  #
-  #   Service = {
-  #     Type = "simple";
-  #     ExecStart = "${ags}/bin/ags";
-  #     Restart = "always";
-  #   };
-  #
-  #   Install = {WantedBy = [systemdTarget];};
-  # };
 
-  xdg.configFile."ags".source = ./.;
+  guiDeps = with pkgs; [
+    gnome.gnome-control-center
+    mission-center
+    overskride
+    wlogout
+  ];
+
+  dependencies = requiredDeps ++ guiDeps;
+
+  cfg = config.programs.ags;
+in {
+  imports = [
+    inputs.ags.homeManagerModules.default
+  ];
+
+  programs.ags.enable = true;
+
+  systemd.user.services.ags = {
+    Unit = {
+      Description = "Aylur's Gtk Shell";
+      PartOf = [
+        "tray.target"
+        "graphical-session.target"
+      ];
+    };
+    Service = {
+      Environment = "PATH=/run/wrappers/bin:${lib.makeBinPath dependencies}";
+      ExecStart = "${cfg.package}/bin/ags";
+      Restart = "on-failure";
+    };
+    Install.WantedBy = ["graphical-session.target"];
+  };
 }

@@ -33,13 +33,15 @@ riverctl map normal Super Return spawn foot
 
 riverctl map normal Super E spawn pcmanfm 
 
-riverctl map normal Super D spawn fuzzel 
+riverctl map normal Super D spawn 'pkill fuzzel || fuzzel'
+
+riverctl map normal Super C spawn 'pkill fuzzel || cliphist list | fuzzel --no-fuzzy --dmenu | cliphist decode | wl-copy'
 
 riverctl map normal Super N spawn 'swaync-client -t'
 
 riverctl map normal Super P spawn 'hyprpicker -a'
     
-riverctl map normal Super+Shift R spawn 'wl-screenrec -g "$(slurp -o)" --codec hevc -b "3 MB" --low-power off --filename screenrec_$(date +%Y%m%d_%H_%M_%S).mp4'
+#riverctl map normal Super+Shift R spawn 'wl-screenrec -g "$(slurp -o)" --codec hevc -b "3 MB" --low-power off --filename screenrec_$(date +%Y%m%d_%H_%M_%S).mp4'
 
 riverctl map normal Super S spawn 'grim -g "$(slurp)" - | swappy -f -'
 
@@ -200,5 +202,5 @@ riverctl rule-add -app-id "bar" csd
 
 # Set the default layout generator to be rivertile and start it.
 # River will send the process group of the init spawnutable SIGTERM on exit.
-riverctl default-layout bsp-layout
-river-bsp-layout --inner-gap 5 --outer-gap 10
+riverctl default-layout wideriver
+wideriver send-layout-cmd wideriver --layout left --stack dwindle --count 1 --ratio 0.5 --inner-gaps 5 --outer-gaps 5
